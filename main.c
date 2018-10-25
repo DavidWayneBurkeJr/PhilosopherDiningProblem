@@ -38,7 +38,8 @@ parent_process(void){
                 printf("Philosopher %d is HUNGRY\n", j);
                 //TODO fill in what child does when hungry. Check for availability
                 //do a circular array search to check availability
-                //if available, set state to eating
+                //if available, set state to eating 
+                //m.state = EATING;
             }
         }
     }
