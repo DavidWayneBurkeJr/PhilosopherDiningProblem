@@ -33,9 +33,10 @@ parent_process(void){
         for (j = 0; j < PHIL_NO; j++){
             read(node[j][0], &m, sizeof(msg));
             if (m.state == HUNGRY){
+                printf("Philosopher %d is HUNGRY\n", j);
 
             }else if (m.state == THINKING){
-
+                printf("Philosopher %d is THINKING\n", j);
             }
         }
     }
@@ -57,25 +58,28 @@ child_process(int i){
     m.finish = CONTINUE;
     m.index = i;
     m.state = THINKING;
-    write(host[1], &m, sizeof(msg));
+    write(node[m.index][1], &m, sizeof(msg));
     do{
-        read(host[0], &m, sizeof(msg));
-        close(host[0]);
+        read(node[m.index][0], &m, sizeof(msg));
+        close(node[m.index][0]);
         printf("Philosopher %d is %d\n", i, m.state);
         sleep(r);
         m.state = HUNGRY;
         printf("Philosopher %d is %d\n", i, m.state);
-        write(host[1], &m, sizeof(msg));
-        close(host[0]);
+        write(node[m.index][1], &m, sizeof(msg));
+        close(node[m.index][1]);
         while (m.state != EATING){
-            read(host[0], &m, sizeof(msg));
+            read(node[m.index][0], &m, sizeof(msg));
         }
+        close(node[m.index][0]);
+        m.state = EATING;
+
         printf("Philosopher %d is %d\n", i, m.state);
-        close(host[0]);
         r = rand() % 15;
         sleep(r);
         m.state = THINKING;
-        write(host[0], &m, sizeof(msg));
+        write(node[m.index][1], &m, sizeof(msg));
+        close(node[m.index][1]);
     }while (m.finish != TERMINATE);
     return 0;
 }
