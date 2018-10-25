@@ -2,6 +2,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <math.h>
+#include <time.h>
 
 #define PHIL_NO   5     /* the number of philosopher */
 #define THINKING  1     /* think state */
@@ -50,7 +51,9 @@ parent_process(void){
 
 child_process(int i){
     msg m;
+    srand((unsigned) (time(NULL) ^ (getpid()<<16)));
     int r = rand() % 15;
+    printf("%d\n", r);
     m.finish = CONTINUE;
     m.index = i;
     m.state = THINKING;
@@ -60,7 +63,6 @@ child_process(int i){
         close(host[0]);
         printf("Philosopher %d is %d\n", i, m.state);
         sleep(r);
-        m.index = i;
         m.state = HUNGRY;
         printf("Philosopher %d is %d\n", i, m.state);
         write(host[1], &m, sizeof(msg));
