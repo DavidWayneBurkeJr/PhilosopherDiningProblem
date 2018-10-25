@@ -29,14 +29,16 @@ parent_process(void){
     int i;
     int j;
     msg m;
+    //tmpArray[PHIL_NO]
     for (i = 1; i < MAX; i++){
         for (j = 0; j < PHIL_NO; j++){
             read(node[j][0], &m, sizeof(msg));
+            //tmpArray[j] = m.state
             if (m.state == HUNGRY){
                 printf("Philosopher %d is HUNGRY\n", j);
-
-            }else if (m.state == THINKING){
-                printf("Philosopher %d is THINKING\n", j);
+                //TODO fill in what child does when hungry. Check for availability
+                //do a circular array search to check availability
+                //if available, set state to eating
             }
         }
     }
@@ -87,7 +89,6 @@ child_process(int i){
 main(void) {
     int i, pid[PHIL_NO];
     printf("Beginning\n");
-    // init(); /* initialization */
     if (pipe(host) < 0) /* make pipe line for host */
     {
         perror("ERROR: Can't make pipe line for host node\n");
