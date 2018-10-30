@@ -22,27 +22,39 @@ typedef struct message {
 int host[2];            /* for host pipe */
 int node[PHIL_NO][2];   /* for child node pipe */
 int count[PHIL_NO];     /* save the number of eating state of each node */
-
+int status[PHIL_NO];
 
 parent_process(void){
     printf("Parent process\n");
     int i;
     int j;
-    msg m;
-    //tmpArray[PHIL_NO]
-    for (i = 1; i < MAX; i++){
+    int head = 0;
+    for (i = 0; i < MAX; i++){
+        head = i;
         for (j = 0; j < PHIL_NO; j++){
-            read(node[j][0], &m, sizeof(msg));
-            //tmpArray[j] = m.state
+            int currentPhil = (head + j) % 5;
+            printf("Current Phil is %d\n", currentPhil);
+            msg m;
+            close(node[currentPhil][1]);
+            read(node[currentPhil][0], &m, sizeof(msg));
+            status[currentPhil] = m.state;
             if (m.state == HUNGRY){
-                printf("Philosopher %d is HUNGRY\n", j);
-                //TODO fill in what child does when hungry. Check for availability
-                //do a circular array search to check availability
-                //if available, set state to eating
+                if (status[(currentPhil - 1) % 5] != EATING && status[(currentPhil + 1) % 5] != EATING){
+                    status[currentPhil] = EATING;
+                    m.state = EATING;
+                    m.index = currentPhil;
+                    m.finish = CONTINUE;
+                    write(node[currentPhil][1], &m, sizeof(msg));
+                }
+
             }
         }
+        sleep(1);
+        printf("Philosopher 1: %d, Philosopher 2: %d, Philosopher 3: %d, Philosopher 4: %d, Philosopher 5: %d\n", status[0],
+                status[1], status[2], status[3], status[4]);
     }
     for (j = 0; j < PHIL_NO; j++){
+        msg m;
         m.state = THINKING;
         m.index = j;
         m.finish = TERMINATE;
@@ -56,32 +68,22 @@ child_process(int i){
     msg m;
     srand((unsigned) (time(NULL) ^ (getpid()<<16)));
     int r = rand() % 15;
-    printf("%d\n", r);
     m.finish = CONTINUE;
     m.index = i;
     m.state = THINKING;
-    write(node[m.index][1], &m, sizeof(msg));
     do{
-        read(node[m.index][0], &m, sizeof(msg));
-        close(node[m.index][0]);
-        printf("Philosopher %d is %d\n", i, m.state);
-        sleep(r);
-        m.state = HUNGRY;
-        printf("Philosopher %d is %d\n", i, m.state);
         write(node[m.index][1], &m, sizeof(msg));
-        close(node[m.index][1]);
+        sleep(r);
+        close(node[m.index][0]);
+        m.state = HUNGRY;
+        write(node[m.index][1], &m, sizeof(msg));
         while (m.state != EATING){
             read(node[m.index][0], &m, sizeof(msg));
         }
-        close(node[m.index][0]);
-        m.state = EATING;
 
-        printf("Philosopher %d is %d\n", i, m.state);
         r = rand() % 15;
         sleep(r);
         m.state = THINKING;
-        write(node[m.index][1], &m, sizeof(msg));
-        close(node[m.index][1]);
     }while (m.finish != TERMINATE);
     return 0;
 }
@@ -108,7 +110,6 @@ main(void) {
     for (i = 0; i < PHIL_NO; i++) {
 /* make 5 child nodes */
         if ((pid[i] = fork()) == 0) {
-            printf("Made %d\n", i);
             child_process(i);
             exit(0);
         };
