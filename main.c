@@ -22,26 +22,26 @@ typedef struct message {
 int host[2];            /* for host pipe */
 int node[PHIL_NO][2];   /* for child node pipe */
 int count[PHIL_NO];     /* save the number of eating state of each node */
-int status[PHIL_NO];
+int status[PHIL_NO];    /* array to save status of neighbors */
 
 parent_process(void){
     printf("Parent process\n");
     int i;
     int j;
-    int head = 0;
+    int head = 0;       // increase index by one per iteration to be fair
     for (i = 0; i < MAX; i++){
         head = i;
         for (j = 0; j < PHIL_NO; j++){
-            int currentPhil = (head + j) % 5;
+            int currentPhil = (head + j) % 5; // get current node index
             printf("Current Phil is %d\n", currentPhil);
             msg m;
             close(node[currentPhil][1]);
-            read(node[currentPhil][0], &m, sizeof(msg));
-            status[currentPhil] = m.state;
-            if (m.state == HUNGRY){
+            read(node[currentPhil][0], &m, sizeof(msg));    /* read from child node and save status in their */
+            status[currentPhil] = m.state;                  /* index in the status array                     */
+            if (m.state == HUNGRY){ //Check if state is hungry for current node
                 if (status[(currentPhil - 1) % 5] != EATING && status[(currentPhil + 1) % 5] != EATING){
-                    status[currentPhil] = EATING;
-                    m.state = EATING;
+                    status[currentPhil] = EATING;  // check to the left and right of the node in status array
+                    m.state = EATING;               //if  neither are eating, current node can eat
                     m.index = currentPhil;
                     m.finish = CONTINUE;
                     write(node[currentPhil][1], &m, sizeof(msg));
@@ -53,7 +53,7 @@ parent_process(void){
         printf("Philosopher 1: %d, Philosopher 2: %d, Philosopher 3: %d, Philosopher 4: %d, Philosopher 5: %d\n", status[0],
                 status[1], status[2], status[3], status[4]);
     }
-    for (j = 0; j < PHIL_NO; j++){
+    for (j = 0; j < PHIL_NO; j++){  // After done, set all to TERMINATE
         msg m;
         m.state = THINKING;
         m.index = j;
@@ -65,6 +65,7 @@ parent_process(void){
 }
 
 child_process(int i){
+    /* Initialization. Set msg to initial values and write it to parent */
     msg m;
     srand((unsigned) (time(NULL) ^ (getpid()<<16)));
     int r = rand() % 15;
@@ -72,18 +73,18 @@ child_process(int i){
     m.index = i;
     m.state = THINKING;
     do{
-        write(node[m.index][1], &m, sizeof(msg));
-        sleep(r);
+        write(node[m.index][1], &m, sizeof(msg));   /* Always write current status to parent in each iteration */
+        sleep(r); // Thinking for random time
         close(node[m.index][0]);
-        m.state = HUNGRY;
-        write(node[m.index][1], &m, sizeof(msg));
+        m.state = HUNGRY;   // Become hungry
+        write(node[m.index][1], &m, sizeof(msg));   //Tell parent
         while (m.state != EATING){
-            read(node[m.index][0], &m, sizeof(msg));
+            read(node[m.index][0], &m, sizeof(msg));    // Keep checking till parent tells child to eat
         }
 
         r = rand() % 15;
-        sleep(r);
-        m.state = THINKING;
+        sleep(r);   // Eat for a random amount of time
+        m.state = THINKING; // Set state back to thinking
     }while (m.finish != TERMINATE);
     return 0;
 }
